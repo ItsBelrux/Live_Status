@@ -1,7 +1,12 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 const API_KEY = process.env.API_KEY;
-const OFFLINE_THRESHOLD = 15000; // 15 saniye
+const OFFLINE_THRESHOLD = 15000;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,27 +20,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const keys = await kv.keys('session:*');
+    const keys = await redis.keys('session:*');
     const sessions = [];
     const now = Date.now();
     
     for (const key of keys) {
-      const session = await kv.get(key);
-      if (session) {
-        // Offline kontrolü
+      const data = await redis.get(key);
+      if (data) {
+        const session = typeof data === 'string' ? JSON.parse(data) : data;
         const isOffline = (now - session.lastPing) > OFFLINE_THRESHOLD;
         session.status = isOffline ? 'offline' : 'online';
         session.lastSeen = new Date(session.lastPing).toLocaleString('tr-TR');
-        
-        // Süre hesaplama
-        const duration = Math.floor((now - session.createdAt) / 1000);
-        session.duration = duration;
-        
+        session.duration = Math.floor((now - session.createdAt) / 1000);
         sessions.push(session);
       }
     }
     
-    // Son ping'e göre sırala (en yeni başta)
     sessions.sort((a, b) => b.lastPing - a.lastPing);
     
     return res.status(200).json({
@@ -50,4 +50,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal error' });
   }
 }
-
