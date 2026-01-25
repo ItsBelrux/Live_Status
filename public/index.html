@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GodFather Premium | Live Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background: #0f0f0f; }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #ff3333, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 51, 51, 0.2);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .value-gold { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+        .status-online { color: #00ff00; text-shadow: 0 0 10px rgba(0, 255, 0, 0.3); }
+        .status-offline { color: #ff0000; opacity: 0.6; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #ff3333; border-radius: 4px; }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="fixed inset-0 bg-black z-50 flex items-center justify-center">
+        <div class="glass p-8 rounded-2xl max-w-md w-full mx-4">
+            <div class="text-center mb-8">
+                <i class="fas fa-shield-alt text-5xl text-red-500 mb-4"></i>
+                <h1 class="text-3xl font-bold gradient-text">GodFather Premium</h1>
+                <p class="text-gray-400 mt-2">Live Status Dashboard</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">API Key</label>
+                    <input type="password" id="apiKey" 
+                        class="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500 transition"
+                        placeholder="API Key girin...">
+                </div>
+                <button onclick="login()" 
+                    class="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white font-bold py-3 rounded-lg transition transform hover:scale-105">
+                    <i class="fas fa-lock mr-2"></i>Giriş Yap
+                </button>
+                <p id="loginError" class="text-red-500 text-sm text-center hidden">Geçersiz API Key</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden">
+        <!-- Navbar -->
+        <nav class="glass fixed w-full top-0 z-40 border-b border-gray-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <div class="flex items-center">
+                        <i class="fas fa-skull text-red-500 text-2xl mr-3"></i>
+                        <span class="text-xl font-bold gradient-text">GodFather</span>
+                        <span class="ml-2 px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded border border-red-500/30">PREMIUM</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right hidden sm:block">
+                            <div class="text-xs text-gray-400">Son Güncelleme</div>
+                            <div id="lastUpdate" class="text-sm font-mono">--:--:--</div>
+                        </div>
+                        <button onclick="logout()" class="text-gray-400 hover:text-white transition">
+                            <i class="fas fa-sign-out-alt text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="glass rounded-xl p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Online Şu An</p>
+                            <h3 id="statOnline" class="text-3xl font-bold text-green-400 mt-1">0</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                            <i class="fas fa-wifi text-green-400"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs text-green-400">
+                        <span class="w-2 h-2 bg-green-400 rounded-full mr-2 pulse"></span>
+                        Canlı
+                    </div>
+                </div>
+
+                <div class="glass rounded-xl p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Toplam Session</p>
+                            <h3 id="statTotal" class="text-3xl font-bold text-white mt-1">0</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                            <i class="fas fa-users text-blue-400"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500">Bugün</div>
+                </div>
+
+                <div class="glass rounded-xl p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Toplam Value</p>
+                            <h3 id="statValue" class="text-3xl font-bold value-gold mt-1">0</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                            <i class="fas fa-coins text-yellow-400"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-yellow-500/70">Tüm zamanlar</div>
+                </div>
+
+                <div class="glass rounded-xl p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">En Yüksek Hit</p>
+                            <h3 id="statMax" class="text-3xl font-bold text-purple-400 mt-1">0</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
+                            <i class="fas fa-crown text-purple-400"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-purple-400/70">Max Value</div>
+                </div>
+            </div>
+
+            <!-- Chart & Sessions -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Chart -->
+                <div class="lg:col-span-1 glass rounded-xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-chart-pie mr-2 text-red-500"></i>
+                        Executor Dağılımı
+                    </h3>
+                    <canvas id="executorChart" height="250"></canvas>
+                </div>
+
+                <!-- Sessions List -->
+                <div class="lg:col-span-2 glass rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold flex items-center">
+                            <i class="fas fa-list mr-2 text-red-500"></i>
+                            Aktif Sessionlar
+                        </h3>
+                        <div class="flex space-x-2">
+                            <button onclick="refreshData()" class="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition text-sm">
+                                <i class="fas fa-sync-alt mr-1"></i>Yenile
+                            </button>
+                            <button onclick="clearOffline()" class="px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition text-sm">
+                                <i class="fas fa-trash mr-1"></i>Temizle
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="sessionsList" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                        <!-- Sessionlar buraya gelecek -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let API_KEY = localStorage.getItem('gf_api_key') || '';
+        let chartInstance = null;
+        let refreshInterval = null;
+
+        // Login
+        function login() {
+            const key = document.getElementById('apiKey').value;
+            if (!key) return;
+            
+            // Test et
+            fetch('/api/sessions?key=' + key)
+                .then(r => {
+                    if (r.ok) {
+                        API_KEY = key;
+                        localStorage.setItem('gf_api_key', key);
+                        document.getElementById('loginScreen').classList.add('hidden');
+                        document.getElementById('dashboard').classList.remove('hidden');
+                        initDashboard();
+                    } else {
+                        document.getElementById('loginError').classList.remove('hidden');
+                    }
+                });
+        }
+
+        function logout() {
+            localStorage.removeItem('gf_api_key');
+            location.reload();
+        }
+
+        // Auto login
+        if (API_KEY) {
+            fetch('/api/sessions?key=' + API_KEY)
+                .then(r => {
+                    if (r.ok) {
+                        document.getElementById('loginScreen').classList.add('hidden');
+                        document.getElementById('dashboard').classList.remove('hidden');
+                        initDashboard();
+                    }
+                });
+        }
+
+        function initDashboard() {
+            refreshData();
+            refreshInterval = setInterval(refreshData, 5000);
+        }
+
+        async function refreshData() {
+            try {
+                // Stats
+                const statsRes = await fetch('/api/stats?key=' + API_KEY);
+                const statsData = await statsRes.json();
+                
+                if (statsData.success) {
+                    document.getElementById('statOnline').textContent = statsData.stats.onlineNow;
+                    document.getElementById('statTotal').textContent = statsData.stats.totalSessions;
+                    document.getElementById('statValue').textContent = statsData.stats.totalValue.toLocaleString();
+                    document.getElementById('statMax').textContent = statsData.stats.maxValue.toLocaleString();
+                    
+                    updateChart(statsData.stats.executors);
+                }
+
+                // Sessions
+                const sessRes = await fetch('/api/sessions?key=' + API_KEY);
+                const sessData = await sessRes.json();
+                
+                if (sessData.success) {
+                    renderSessions(sessData.sessions);
+                    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('tr-TR');
+                }
+            } catch (e) {
+                console.error('Refresh error:', e);
+            }
+        }
+
+        function renderSessions(sessions) {
+            const container = document.getElementById('sessionsList');
+            
+            if (sessions.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">Aktif session yok</div>';
+                return;
+            }
+
+            container.innerHTML = sessions.map(s => `
+                <div class="slide-in bg-black/30 border ${s.status === 'online' ? 'border-green-500/30' : 'border-red-500/30'} rounded-lg p-4 hover:bg-white/5 transition cursor-pointer group">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="font-bold text-white">${s.displayName || s.username}</span>
+                                <span class="text-xs text-gray-500">(@${s.username})</span>
+                                ${s.totalRap > 1000 ? '<span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded border border-yellow-500/30">💰 BIG</span>' : ''}
+                            </div>
+                            
+                            <div class="flex items-center space-x-4 text-sm text-gray-400 mb-2">
+                                <span class="flex items-center">
+                                    <i class="fas fa-coins mr-1 text-yellow-500"></i>
+                                    <span class="value-gold font-semibold">${s.totalRap.toLocaleString()}</span>
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-microchip mr-1 text-blue-400"></i>
+                                    ${s.executor}
+                                </span>
+                                <span class="flex items-center ${s.status === 'online' ? 'status-online' : 'status-offline'}">
+                                    <i class="fas fa-circle text-xs mr-1"></i>
+                                    ${s.status === 'online' ? 'ONLINE' : 'OFFLINE'}
+                                </span>
+                            </div>
+                            
+                            <div class="font-mono text-xs text-gray-600 bg-black/50 p-2 rounded mt-2 flex justify-between items-center group-hover:text-gray-400 transition">
+                                <span class="truncate mr-2">${s.jobId}</span>
+                                <button onclick="copyToClipboard('${s.jobId}')" class="text-red-500 hover:text-red-400">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="text-right text-xs text-gray-600 ml-4">
+                            <div>${s.lastSeen}</div>
+                            <div class="mt-1">${Math.floor(s.duration / 60)}m ${s.duration % 60}s</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateChart(executors) {
+            const ctx = document.getElementById('executorChart').getContext('2d');
+            const labels = Object.keys(executors);
+            const data = Object.values(executors);
+            
+            if (chartInstance) chartInstance.destroy();
+            
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#ff3333', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#9ca3af', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            // Toast notification eklenebilir
+        }
+
+        function clearOffline() {
+            if (!confirm('Offline sessionları temizlemek istiyor musunuz?')) return;
+            // API'ye delete isteği atılabilir (şimdilik sadece UI'dan kaldır)
+            refreshData();
+        }
+
+        // Cleanup
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) clearInterval(refreshInterval);
+        });
+    </script>
+</body>
+</html>
+
